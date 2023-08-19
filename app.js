@@ -1,6 +1,13 @@
-const express = require("express");
-const app = express();
 const port = process.env.PORT || 3001;
+const app = require('express')();
+const server = require('http').createServer(app);
+
+const { WebSocketServer } = require('ws');
+const wsServer = new WebSocketServer({ server });
+
+const users = ["esp32", "app"];
+var id = 0;
+let data;
 
 //app.get("/", (req, res) => res.type('html').send(html));
 
@@ -9,14 +16,42 @@ app.get('/', (req, res) => {
     res.send({
         "userId": 1,
         "id": 1,
-        "title": "loc day ne cac ban"
+        "title": "tao day ne cac ban"
     });
     
 })
 app.get('/news', (req, res) => {
     res.send("Hello frome NEWS....")
 })
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+// A new client connection request received
+wsServer.on('connection', (webSocketClient) => {
+    //send feedback to the incoming connection
+    webSocketClient.send('{ "connection" : "ok"}');
+
+    //when a message is received
+    webSocketClient.on('message', (message) => {
+        //for each websocket client
+        var temp_mes = JSON.parse(message);
+        users.forEach(
+            user => {
+                if (temp_mes.name == user) {
+                    delete temp_mes.name;
+                    data = temp_mes;
+                    console.log(data);
+                    webSocketClient.send("Server respone: OK");
+                    wsServer.clients.forEach(
+                        client => {
+                            //send the client the current message
+                            const jsonString = JSON.stringify(data);
+                            client.send(`${jsonString}`);
+                        });
+                }
+            }
+        )
+
+    });
+});
+server.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
 server.keepAliveTimeout = 120 * 1000;
 server.headersTimeout = 120 * 1000;
